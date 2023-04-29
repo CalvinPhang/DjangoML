@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "paho",
     
     "subsystem",
+    "machinelearning"
 ]
 
 MIDDLEWARE = [

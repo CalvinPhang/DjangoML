@@ -6,11 +6,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 import joblib
-import machinelearning
+from machinelearning import mlmodel
 
 from .models import Sensor, SensorLog, Actuator, ActuatorLog
-
-
 
 class SensorTemplateView(APIView):
     sensor_name = ""
@@ -23,10 +21,19 @@ class SensorTemplateView(APIView):
 
 class ActuatorTemplateView(APIView):
     actuator_name = ""
+    sensor1_name = ""
+    sensor2_name = ""
+    sensor3_name = ""
+    training_csv = ""
     def get(self, request, format=None):
         actuator = Actuator.objects.get(name=self.actuator_name)
-        sensors = Sensor.objects.filter(subsystem=actuator.subsystem)
-        
+        sensor1 = Sensor.objects.get(name=self.sensor1_name)
+        sensor2 = Sensor.objects.get(name=self.sensor2_name)
+        sensor3 = Sensor.objects.get(name=self.sensor3_name)
+        model = mlmodel.BaseLinearRegression(settings.ML_ROOT + self.training_csv)
+        prediction = model.predict([float(sensor1.value), float(sensor2.value), float(sensor3.value)])
+        actuator.state = int(prediction)
+        actuator.save()
         data = {
             "state": actuator.state
         }
@@ -46,20 +53,12 @@ class WaterUsageRateView(SensorTemplateView):
 class OutsideTemperatureView(SensorTemplateView):
     sensor_name = "Outside Temperature"
     
-class WaterHeaterView(APIView):
-    def get(self, request, format=None):
-        actuator = Actuator.objects.get(name="Water Heater")
-        watertemp = Sensor.objects.get(name="Water Temperature")
-        waterrate = Sensor.objects.get(name="Water Usage Rate")
-        outtemp = Sensor.objects.get(name="Outside Temperature")
-        model = joblib.load(settings.ML_ROOT + "heater_model.pkl")
-        prediction = model.predict([[float(watertemp.value), float(waterrate.value), float(outtemp.value)]])
-        actuator.state = int(prediction)
-        actuator.save()
-        data = {
-            "state": int(prediction)
-        }
-        return Response(data)
+class WaterHeaterView(ActuatorTemplateView):
+    actuator_name = "Water Heater"
+    sensor1_name = "Water Temperature"
+    sensor2_name = "Water Usage Rate"
+    sensor3_name = "Outside Temperature"
+    training_csv = "heater.csv"
 
 # Fan Control System
 class RoomTemperatureView(SensorTemplateView):
@@ -72,19 +71,11 @@ class RoomCO2View(SensorTemplateView):
     sensor_name = "Room CO2"
     
 class VentilationFanView(ActuatorTemplateView):
-    def get(self, request, format=None):
-        actuator = Actuator.objects.get(name="Ventilation Fan")
-        roomtemp = Sensor.objects.get(name="Room Temperature")
-        roomhum = Sensor.objects.get(name="Room Humidity")
-        roomco2 = Sensor.objects.get(name="Room CO2")
-        model = joblib.load(settings.ML_ROOT + "fan_model.pkl")
-        prediction = model.predict([[float(roomtemp.value), float(roomhum.value), float(roomco2.value)]])
-        actuator.state = int(prediction)
-        actuator.save()
-        data = {
-            "state": int(prediction)
-        }
-        return Response(data)
+    actuator_name = "Ventilation Fan"
+    sensor1_name = "Room Temperature"
+    sensor2_name = "Room Humidity"
+    sensor3_name = "Room CO2"
+    training_csv = "fan.csv"
     
 # Lighting Control System
 class LightLevelView(SensorTemplateView):
@@ -97,16 +88,8 @@ class DaylightView(SensorTemplateView):
     sensor_name = "Daylight"
 
 class LightingSystemView(ActuatorTemplateView):
-    def get(self, request, format=None):
-        actuator = Actuator.objects.get(name="Lighting System")
-        lightlevel = Sensor.objects.get(name="Light Level")
-        occupancy = Sensor.objects.get(name="Occupancy")
-        daylight = Sensor.objects.get(name="Daylight")
-        model = joblib.load(settings.ML_ROOT + "light_model.pkl")
-        prediction = model.predict([[float(lightlevel.value), float(occupancy.value), float(daylight.value)]])
-        actuator.state = int(prediction)
-        actuator.save()
-        data = {
-            "state": int(prediction)
-        }
-        return Response(data)
+    actuator_name = "Lighting System"
+    sensor1_name = "Light Level"
+    sensor2_name = "Occupancy"
+    sensor3_name = "Daylight"
+    training_csv = "light.csv"
