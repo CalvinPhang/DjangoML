@@ -24,14 +24,13 @@ class ActuatorTemplateView(APIView):
     sensor1_name = ""
     sensor2_name = ""
     sensor3_name = ""
-    training_csv = ""
+    model = ""
     def get(self, request, format=None):
         actuator = Actuator.objects.get(name=self.actuator_name)
         sensor1 = Sensor.objects.get(name=self.sensor1_name)
         sensor2 = Sensor.objects.get(name=self.sensor2_name)
         sensor3 = Sensor.objects.get(name=self.sensor3_name)
-        model = mlmodel.BaseLinearRegression(settings.ML_ROOT + self.training_csv)
-        prediction = model.predict([float(sensor1.value), float(sensor2.value), float(sensor3.value)])
+        prediction = self.model.predict([float(sensor1.value), float(sensor2.value), float(sensor3.value)])
         actuator.state = int(prediction)
         actuator.save()
         data = {
@@ -58,7 +57,7 @@ class WaterHeaterView(ActuatorTemplateView):
     sensor1_name = "Water Temperature"
     sensor2_name = "Water Usage Rate"
     sensor3_name = "Outside Temperature"
-    training_csv = "heater.csv"
+    model = mlmodel.water_heater_model
 
 # Fan Control System
 class RoomTemperatureView(SensorTemplateView):
@@ -75,7 +74,7 @@ class VentilationFanView(ActuatorTemplateView):
     sensor1_name = "Room Temperature"
     sensor2_name = "Room Humidity"
     sensor3_name = "Room CO2"
-    training_csv = "fan.csv"
+    model = mlmodel.fan_control_model
     
 # Lighting Control System
 class LightLevelView(SensorTemplateView):
@@ -92,4 +91,4 @@ class LightingSystemView(ActuatorTemplateView):
     sensor1_name = "Light Level"
     sensor2_name = "Occupancy"
     sensor3_name = "Daylight"
-    training_csv = "light.csv"
+    model = mlmodel.light_control_model
